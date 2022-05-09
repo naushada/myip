@@ -1,5 +1,5 @@
-#ifndef __IPVX_H__
-#define __IPVX_H__
+#ifndef __ipvx_h__
+#define __ipvx_h__
 
 #include <vector>
 #include <memory>
@@ -27,13 +27,24 @@
 #include "ace/SSL/SSL_SOCK_Connector.h"
 #include "ace/SSL/SSL_Context.h"
 
+#include "http_parser.h"
+
+class WebServer ;
 
 class WebClientEntry {
     public:
-        WebClientEntry();
+        WebClientEntry(WebServer *parent);
         ~WebClientEntry();
-        ACE_Message_Block *processRequest(ACE_Message_Block& req);
-        ACE_Message_Block *buildAndSendResponse(ACE_Message_Block& req);
+        bool processRequest(ACE_HANDLE handle);
+        bool buildAndSendResponse(ACE_HANDLE handle, Http http);
+        WebServer& get_parent() const;
+        ACE_INT32 sendResponse(ACE_HANDLE handle, std::string rsp);
+        std::string build200OK(Http http);
+        std::string buildIPResponse(Http http);
+
+
+    private:
+        WebServer *m_parent;
 };
 
 
@@ -47,17 +58,17 @@ class WebServer : public ACE_Event_Handler {
 
         WebServer(std::string _ip, ACE_UINT16 _port);
         virtual ~WebServer();
-        bool start();
-        bool stop();
+        void start();
+        void stop();
 
     private:
         ACE_Message_Block m_mb;
         ACE_SOCK_Stream m_stream;
         ACE_INET_Addr m_listen;
         ACE_SOCK_Acceptor m_server;
-        std::unordered_map<ACE_INT32, WebClientEntry*> mWebClientEntry; 
+        std::unordered_map<ACE_INT32, WebClientEntry*> m_webClientEntry; 
 };
 
 
 
-#endif /*__IPVX_H__*/
+#endif /*__ipvx_h__*/
