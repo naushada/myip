@@ -35,6 +35,9 @@ bool WebClientEntry::processRequest(ACE_HANDLE handle)
         /* Receive failed */
         ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l recv on handle %u is failed\n"), handle));
         return(false);
+    } else if(!ret) {
+        ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l The Request length is 0 \n%s\n"), mb->rd_ptr()));
+        return(false);
     } else {
 
         /* Receive is success , process it. */
@@ -154,13 +157,14 @@ WebServer::WebServer(std::string ipStr, std::string listenPort)
         addr = ipStr;
         addr += ":";
         addr += listenPort;
-        m_listen.set(std::stoi(listenPort), ipStr.c_str());
+        //m_listen.set(std::stoi(listenPort), ipStr.c_str());
+        m_listen.set_address(ipStr.c_str(), ipStr.length());
     } else {
 
         addr = "127.0.0.1";
         addr += ":";
         addr += listenPort;
-        m_listen.set(std::stoi(listenPort));
+        m_listen.set_port_number(std::stoi(listenPort));
 
     }
 
