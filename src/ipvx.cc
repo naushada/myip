@@ -165,7 +165,7 @@ WebServer::WebServer(std::string ipStr, std::string listenPort)
     }
 
     int reuse_addr = 1;
-    if(m_server.open(m_listen, reuse_addr, AF_INET)) {
+    if(m_server.open(m_listen, reuse_addr)) {
         ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l Starting of WebServer failed - opening of port %d hostname %s\n"), 
                 m_listen.get_port_number(), m_listen.get_host_name()));
     }
@@ -255,8 +255,8 @@ ACE_INT32 WebServer::handle_signal(int signum, siginfo_t *s, ucontext_t *u)
 
     m_webClientEntry.clear();
 
-    m_isRunning = false;
-    return(-1);
+    //m_isRunning = false;
+    return(0);
 }
 
 
