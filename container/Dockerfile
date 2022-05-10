@@ -47,6 +47,5 @@ RUN cp /root/myip/ix86_64/uniip .
 # CMD_ARGS will be : --ip <ip> --port <port>
 
 ENV PORT=8080
-ENV IP="127.0.0.1"
 
-CMD "/opt/xAPP/myip/uniip" --ip ${IP} --port ${PORT} 
+CMD "/opt/xAPP/myip/uniip" --port ${PORT} 
