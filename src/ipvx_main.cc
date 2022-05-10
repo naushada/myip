@@ -7,7 +7,7 @@
 int main(int argc, char* argv[])
 {
     std::string ip("127.0.0.1");
-    ACE_UINT16 port = 8080;
+    std::string port = "8080";
 
     ACE_LOG_MSG->open (argv[0], ACE_LOG_MSG->STDERR|ACE_LOG_MSG->SYSLOG);
 
@@ -31,8 +31,8 @@ int main(int argc, char* argv[])
 
        case 'p':
        {
-          port = atoi(opts.opt_arg());
-         ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [master:%t] %M %N:%l PORT %u\n"), port));
+          port.assign(opts.opt_arg());
+         ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [master:%t] %M %N:%l PORT %s\n"), port.c_str()));
        }
          break;
        case 'h':
@@ -51,7 +51,6 @@ int main(int argc, char* argv[])
     WebServer webServer(ip, port);
 
     webServer.start();
-
 }
 
 

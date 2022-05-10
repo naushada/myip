@@ -56,12 +56,13 @@ class WebServer : public ACE_Event_Handler {
         ACE_INT32 handle_close (ACE_HANDLE = ACE_INVALID_HANDLE, ACE_Reactor_Mask = 0) override;
         ACE_HANDLE get_handle() const override;
 
-        WebServer(std::string _ip, ACE_UINT16 _port);
+        WebServer(std::string _ip, std::string _port);
         virtual ~WebServer();
         void start();
         void stop();
 
     private:
+        bool m_isRunning;
         ACE_Message_Block m_mb;
         ACE_SOCK_Stream m_stream;
         ACE_INET_Addr m_listen;

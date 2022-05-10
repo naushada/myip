@@ -15,6 +15,12 @@ WebClientEntry::~WebClientEntry()
 
 }
 
+WebServer& WebClientEntry::get_parent() const 
+{
+    return(*m_parent);
+}
+
+
 bool WebClientEntry::processRequest(ACE_HANDLE handle)
 {
     ACE_Message_Block *mb = nullptr;
@@ -23,16 +29,17 @@ bool WebClientEntry::processRequest(ACE_HANDLE handle)
     mb->reset();
     size_t ret = -1;
 
-    ret = recv(handle, mb->wr_ptr(), mb->size(),0);
+    ret = ACE_OS::recv(handle, mb->wr_ptr(), mb->size(),0);
 
     if(ret < 0) {
         /* Receive failed */
         ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l recv on handle %u is failed\n"), handle));
         return(false);
     } else {
+
         /* Receive is success , process it. */
         mb->wr_ptr(ret);
-
+        ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l The Request is \n%s\n"), mb->rd_ptr()));
         std::string req(mb->rd_ptr(), mb->length());
         /* Parsing HTTP Request Now */
         Http http(req);
@@ -59,6 +66,7 @@ bool WebClientEntry::processRequest(ACE_HANDLE handle)
     return(true);
 }
 
+
 std::string WebClientEntry::build200OK(Http http)
 {
     std::stringstream rsp("");
@@ -67,7 +75,8 @@ std::string WebClientEntry::build200OK(Http http)
         << "Host: " << http.get_element("Host") << "\r\n"
         << "Connection: close\r\n"
         << "Content-Type: " << "text/html" << "\r\n"
-        << "Content-Length: 0" << "\r\n";
+        << "Content-Length: 0" << "\r\n"
+        << "\r\n";
         
 
     return(rsp.str());
@@ -104,7 +113,7 @@ bool WebClientEntry::buildAndSendResponse(ACE_HANDLE handle, Http http)
     size_t len = sendResponse(handle, rsp);
 
     if(len < 0) {
-        ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l send_n on handle %u is failed\n"), handle));
+        ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l sendResponse on handle %u is failed\n"), handle));
         return(false);
     }
 
@@ -119,7 +128,7 @@ ACE_INT32 WebClientEntry::sendResponse(ACE_HANDLE handle, std::string rsp)
     char *data = rsp.data();
 
     do {
-        ret = send(handle, (const char *)&data[offset], (toBeSent - offset), 0);
+        ret = ACE_OS::send(handle, (const char *)(data + offset), (toBeSent - offset), 0);
 
         if(ret > 0) {
             offset += ret;
@@ -130,30 +139,39 @@ ACE_INT32 WebClientEntry::sendResponse(ACE_HANDLE handle, std::string rsp)
 
     }while(toBeSent != offset);
 
-    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l Response sent is %s\n"), rsp.c_str()));
+    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l Response sent is \n%s\n"), rsp.c_str()));
     return(toBeSent);
 }
 
-WebServer::WebServer(std::string ipStr, ACE_UINT16 listenPort)
+WebServer::WebServer(std::string ipStr, std::string listenPort)
 {
+    m_isRunning = false;
     std::string addr;
     addr.clear();
 
     if(ipStr.length()) {
+
         addr = ipStr;
         addr += ":";
-        addr += std::to_string(listenPort);
-        m_listen.set_address(addr.c_str(), addr.length());
+        addr += listenPort;
+        m_listen.set(std::stoi(listenPort), ipStr.c_str());
     } else {
-        addr = std::to_string(listenPort);
-        m_listen.set_port_number(listenPort);
+
+        addr = "127.0.0.1";
+        addr += ":";
+        addr += listenPort;
+        m_listen.set(std::stoi(listenPort));
+
     }
 
     int reuse_addr = 1;
-    if(m_server.open(m_listen, reuse_addr)) {
+    if(m_server.open(m_listen, reuse_addr, AF_INET)) {
         ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l Starting of WebServer failed - opening of port %d hostname %s\n"), 
                 m_listen.get_port_number(), m_listen.get_host_name()));
     }
+
+    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l Starting of WebServer for port %d hostname %s addr %s\n"), 
+                m_listen.get_port_number(), m_listen.get_host_name(), addr.c_str()));
 }
 
 
@@ -236,6 +254,8 @@ ACE_INT32 WebServer::handle_signal(int signum, siginfo_t *s, ucontext_t *u)
     }
 
     m_webClientEntry.clear();
+
+    m_isRunning = false;
     return(-1);
 }
 
@@ -257,7 +277,6 @@ ACE_HANDLE WebServer::get_handle() const
 void WebServer::start()
 {
     ACE_Reactor::instance()->register_handler(this, ACE_Event_Handler::ACCEPT_MASK |
-                                                    ACE_Event_Handler::READ_MASK |
                                                     ACE_Event_Handler::TIMER_MASK |
                                                     ACE_Event_Handler::SIGNAL_MASK); 
     /* subscribe for signal */
@@ -266,16 +285,21 @@ void WebServer::start()
     ss.sig_add(SIGINT);
     ss.sig_add(SIGTERM);
     ACE_Reactor::instance()->register_handler(&ss, this); 
-
+    m_isRunning = true;
     ACE_Time_Value to(1,0);
 
-    while(1) {
+    while(m_isRunning) {
         ACE_Reactor::instance()->handle_events(to);
     }
+
+    stop();
 }
 
 void WebServer::stop()
 {
+    ACE_Reactor::instance()->remove_handler(m_server.get_handle(), ACE_Event_Handler::ACCEPT_MASK |
+                                                                   ACE_Event_Handler::TIMER_MASK |
+                                                                   ACE_Event_Handler::SIGNAL_MASK);
 
 }
 
