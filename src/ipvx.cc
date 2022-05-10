@@ -36,7 +36,7 @@ bool WebClientEntry::processRequest(ACE_HANDLE handle)
         ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l recv on handle %u is failed\n"), handle));
         return(false);
     } else if(!ret) {
-        ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l The Request length is 0 \n%s\n"), mb->rd_ptr()));
+        ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l The Request length is 0\n")));
         return(false);
     } else {
 
