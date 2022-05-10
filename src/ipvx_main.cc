@@ -6,7 +6,7 @@
 
 int main(int argc, char* argv[])
 {
-    std::string ip("127.0.0.1");
+    std::string ip("");
     std::string port = "8080";
 
     ACE_LOG_MSG->open (argv[0], ACE_LOG_MSG->STDERR|ACE_LOG_MSG->SYSLOG);
