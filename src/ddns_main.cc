@@ -1,7 +1,7 @@
-#ifndef __ipvx_main_cc__
-#define __ipvx_main_cc__
+#ifndef __ddns_main_cc__
+#define __ddns_main_cc__
 
-#include "ipvx.h"
+#include "ddns.h"
 
 
 int main(int argc, char* argv[])
@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
     std::string port = "8080";
 
     ACE_LOG_MSG->open (argv[0], ACE_LOG_MSG->STDERR|ACE_LOG_MSG->SYSLOG);
-
+#if 0
    /* The last argument tells from where to start in argv - offset of argv array */
    ACE_Get_Opt opts (argc, argv, ACE_TEXT ("i:p:"), 1);
 
@@ -51,6 +51,22 @@ int main(int argc, char* argv[])
     WebServer webServer(ip, port);
 
     webServer.start();
+#endif
+
+  TLSClient ddns("ipvx.herokuapp.com", 443);
+
+  if(ddns.start()) {
+    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [master:%t] %M %N:%l Client is connected successfully\n")));
+    if(ddns.buildAndSendRequestToGetDynamicIP() < 0) {
+      /* Error case */
+      ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l Request is sent successfully\n")));
+    } else {
+      ACE_Time_Value to(1,0);
+      while(ddns.isRunning()) {
+        ACE_Reactor::instance()->handle_events(to);
+      }
+    }
+  }
 }
 
 
@@ -64,4 +80,4 @@ int main(int argc, char* argv[])
 
 
 
-#endif /* __ipvx_main_cc__*/
+#endif /* __ddns_main_cc__*/
