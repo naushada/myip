@@ -1,7 +1,7 @@
-#ifndef __ddns_cc__
-#define __ddns_cc__
+#ifndef __ipvx_cc__
+#define __ipvx_cc__
 
-#include "ddns.h"
+#include "ipvx.h"
 
 
 WebClientEntry::WebClientEntry(WebServer *webServer)
@@ -27,7 +27,7 @@ bool WebClientEntry::processRequest(ACE_HANDLE handle)
     ACE_NEW_RETURN(mb, ACE_Message_Block(2048), 0);
 
     mb->reset();
-    ACE_INT32 ret = -1;
+    size_t ret = -1;
 
     ret = ACE_OS::recv(handle, mb->wr_ptr(), mb->size(),0);
 
@@ -219,7 +219,7 @@ ACE_INT32 WebServer::handle_input(ACE_HANDLE handle)
         auto it = m_webClientEntry.find(handle);
         if(it != std::end(m_webClientEntry)) {
 
-            ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l procssing on handle %u\n"), handle));
+            ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l procssing on handle %d\n"), handle));
             ent = it->second;
 
             if(!ent->processRequest(handle)) {
@@ -231,7 +231,7 @@ ACE_INT32 WebServer::handle_input(ACE_HANDLE handle)
             }
         } else {
             /* Error case */
-            ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l handle_input is failed %u\n"), handle));
+            ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l handle_input is failed\n"), handle));
         }
 
     }
@@ -307,209 +307,5 @@ void WebServer::stop()
 
 }
 
-/**
- * @brief ddns client with TSL
- * @param parameter-name description
- * 
- */
-ACE_INT32 TLSClient::handle_timeout(const ACE_Time_Value &tv, const void *act)
-{
 
-}
-
-
-/**
- * @brief 
- * 
- * @param handle 
- * @return ACE_INT32 
- */
-ACE_INT32 TLSClient::handle_input(ACE_HANDLE handle)
-{
-    ACE_Message_Block *mb;
-    ACE_NEW_RETURN(mb, ACE_Message_Block(2048), -1);
-    ACE_INT32 len = -1;
-
-    len = m_stream.recv(mb->wr_ptr(), mb->size());
-
-    if(len < 0) {
-        /* Error case */
-        ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l handle_input is failed for handle %u\n"), handle));
-
-    } else if(!len) {
-        /* Error case */
-        ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l handle_input connection is closed for handle %u\n"), handle));
-        
-    } else {
-        mb->wr_ptr(len);
-        std::string rsp(mb->rd_ptr(), mb->length());
-        ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l The response length %u and response is %s\n"), rsp.length(), rsp.c_str()));
-        m_isRunning = false;
-    }
-
-    mb->release();
-    return(-1);
-}
-
-
-/**
- * @brief 
- * 
- * @param signum 
- * @param s 
- * @param u 
- * @return ACE_INT32 
- */
-ACE_INT32 TLSClient::handle_signal(int signum, siginfo_t *s, ucontext_t *u)
-{
-
-}
-
-
-/**
- * @brief 
- * 
- * @param handle 
- * @param mask 
- * @return ACE_INT32 
- */
-ACE_INT32 TLSClient::handle_close (ACE_HANDLE handle, ACE_Reactor_Mask mask)
-{
-
-}
-
-
-/**
- * @brief 
- * 
- * @return ACE_HANDLE 
- */
-ACE_HANDLE TLSClient::get_handle() const
-{
-
-}
-
-
-/**
- * @brief 
- * 
- * @return true 
- * @return false 
- */
-bool TLSClient::start()
-{
-    //ACE_SSL_SOCK_Connector conn(m_stream, m_peerAddr);
-
-    if(m_conn.connect(m_stream, m_peerAddr) < 0) {
-        ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l connect to %s and port %u is failed\n"), 
-                    m_peerAddr.get_host_name(), m_peerAddr.get_port_number()));
-        return(false);
-    }
-
-    /* Feed this new handle to event Handler for read/write operation. */
-    ACE_Reactor::instance()->register_handler(m_stream.get_handle(), this, ACE_Event_Handler::READ_MASK);
-    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D [Master:%t] %M %N:%l The TLSClient is connected at handle %u\n"), m_stream.get_handle()));
-
-    m_isRunning = true;
-    return(true);
-}
-
-
-/**
- * @brief 
- * 
- * @return true 
- * @return false 
- */
-bool TLSClient::stop()
-{
-
-}
-
-
-/**
- * @brief 
- * 
- * @return std::string 
- */
-std::string TLSClient::buildRequestToGetDYNIP()
-{
-    std::stringstream rsp("");
-
-    rsp << "GET / HTTP/1.1\r\n"
-        << "Host: ipvx.herokuapp.com" << "\r\n"
-        << "User-Agent: Cordoba/1.0\r\n"
-        << "Connection: close\r\n"
-        << "Content-Type: " << "text/html" << "\r\n"
-        << "Content-Length: 0" << "\r\n"
-        << "\r\n";
-    return(rsp.str());
-}
-
-
-/**
- * @brief 
- * 
- * @param req 
- * @return ACE_INT32 
- */
-ACE_INT32 TLSClient::sendRequest(std::string req)
-{
-    ACE_INT32 ret = -1;
-    ret = m_stream.send_n(req.c_str(), req.length());
-
-    if(ret < 0) {
-        ACE_ERROR((LM_ERROR, ACE_TEXT("%D [worker:%t] %M %N:%l send_n to %s and port %u is failed for length %u\n"), 
-                    m_peerAddr.get_host_name(), m_peerAddr.get_port_number(), req.length()));
-    }
-
-    return(ret);
-}
-
-
-/**
- * @brief 
- * 
- * @return ACE_INT32 
- */
-ACE_INT32 TLSClient::buildAndSendRequestToGetDynamicIP()
-{
-    std::string req;
-    ACE_INT32 ret = -1;
-
-    req = buildRequestToGetDYNIP();
-    ret = sendRequest(req);
-
-    return(ret);
-}
-
-
-/**
- * @brief 
- * 
- * @param mb 
- * @return ACE_INT32 
- */
-ACE_INT32 TLSClient::processResponse(ACE_Message_Block& mb)
-{
-    std::string rsp(mb.rd_ptr(), mb.length());
-
-}
-
-
-/**
- * @brief 
- * 
- * @param mb 
- * @return true 
- * @return false 
- */
-bool TLSClient::preProcessResponse(ACE_Message_Block& mb)
-{
-    bool isCompleteResponse = false;
-    std::string rsp(mb.rd_ptr(), mb.length());
-
-    return(isCompleteResponse);
-}
-
-#endif /*__ddns_cc__*/
+#endif /*__ipvx_cc__*/

@@ -12,9 +12,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -g -Wall -Wextra")
 #However, the file(GLOB...) allows for wildcard additions:
 file(GLOB SOURCES "src/*.cc")
 
-add_executable(cordoba ${SOURCES})
-target_link_libraries(cordoba pthread)
-target_link_libraries(cordoba ACE)
-target_link_libraries(cordoba ACE_SSL)
-target_link_libraries(cordoba ssl crypto)
+add_executable(uniip ${SOURCES})
+target_link_libraries(uniip pthread)
+target_link_libraries(uniip ACE)
+target_link_libraries(uniip ACE_SSL)
+target_link_libraries(uniip ssl crypto)
 
